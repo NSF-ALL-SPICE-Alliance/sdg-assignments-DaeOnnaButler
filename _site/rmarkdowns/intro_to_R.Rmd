@@ -37,6 +37,11 @@ One of the most helpful tools to an R programmer are R packages! In a nutshell, 
 library()
 ```
 
+```{r}
+library()
+
+```
+
 A new window should have opened up with a list of packages and a short description! 
 
 *Note*
@@ -76,7 +81,7 @@ To be able to use the package and its functions in R Studio, we need to load the
 
 ```{r, message=FALSE}
 library(tidyverse) # put the name of the package/library in the parenthesis 
-```
+c```
 Awesome! Now we can access the many cool things that the tidyverse package can do for us. We'll start using this package and its functions as we go along.
 
 [Check out the tidyverse package documentation](https://www.tidyverse.org/)
@@ -107,6 +112,12 @@ my_age + 5 # how old will you be in 5 years?
 
 #### <span style="color: red;">Challenge 1</span>
 Create a my_name variable with your name assigned to the variable instead of "Victoria DelaCruz". Then, create a my_age variable with your age. 
+```{r}
+my_name="DaeOnna Butler"
+```
+```{r}
+my_age=20
+```
 
 #### Different Types of Data
 
@@ -293,6 +304,12 @@ What if we want to subset specific rows? We can do this by using the filter func
 
 #### <span style="color: red;">Challenge 2</span>
 Using the `select()` function, select two new SDG goal scores. Assign it to a variable named `SDG_scores`. 
+```{r}
+SDG_scores <- sdr_data %>% 
+  select(goal_9_score, goal_5_score)  
+
+SDG_scores 
+```
 
 *2. filter()*
 
@@ -323,8 +340,9 @@ When executing the last 2 code chunks, notice that we did not use the assign arr
     - Example Below:
     
 ```{r}
-oceania_data <- sdr_data %>% 
-  filter(regions_used_for_the_sdr == "Oceania")
+new_region <- sdr_data %>% 
+  filter(regions_used_for_the_sdr == "LAC")
+new_region
 ```
 
 Now, you will have a dataframe called *oceania_data* in your environment pane (top right of the screen) that you can click on
