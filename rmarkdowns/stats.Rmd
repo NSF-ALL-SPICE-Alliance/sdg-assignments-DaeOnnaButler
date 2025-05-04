@@ -197,13 +197,17 @@ To circle back and reinforce how the linear regression (line drawn through our s
   - What does this look like on scatter plot?
   
 ```{r, warning=FALSE, message=FALSE}
-ggplot(sdr_data, aes(x = goal_12_score, 
-                     y = goal_9_score)) +
+library(ggplot2)
+library(plotly)
+library(ggpubr)
+p<- ggplot(sdr_data, aes(x = goal_2_score, 
+                     y = goal_8_score,
+                       text = paste("Country:", country, "\nGoal 2 Score:", goal_2_score, "\nGoal 8 Score:", goal_8_score))) +
   geom_point() +
-  geom_smooth() +
+  geom_smooth(method ="lm") +
   stat_cor() +
-  theme_minimal() 
-
+  theme_minimal()
+ggplotly(p, tooltip = "text")
 ```
 
 ### <span style="color: red;">Challenge 1</span>
@@ -216,7 +220,21 @@ ggplot(sdr_data, aes(x = goal_12_score,
      - **Hint** to use the ggplotly() function, you will need to use `library()` to load in the plotly package in the first code chunk in this R Markdown
 
   - in 4-6 sentences, come up with a hypotheses for the positive or negative correlation between the 2 goals
-      
+```{r}
+"My research hypothesis proposes that achieving SDG Goal 2 (Zero Hunger) will establish a positive relationship with SDG Goal 8 (Economic Growth). Countries with stronger economic growth (Goal 8) create better conditions for directing resources to food security operations and social programs which improves hunger management (Goal 2). Nations enduring persistent hunger face economic difficulties because malnutrition reduces their workforce productivity. There are specific cases where hunger does not decrease with economic growth because of inequality or poor governance yet stays minimal during moderate economic growth due to strong social policies."
+```
       - are there any points that don't follow the trend (outliers)
-        
+```{r}
+"Yes, some countries deviate from the expected trend."
+```
         - which country(s) are outliers?
+```{r}
+"1.High Goal 8 (Economic Growth) but Low Goal 2 (Hunger):
+United States (high economic score but persistent food insecurity)
+Saudi Arabia (wealthy but reliant on food imports)
+2.Low Goal 8 but High Goal 2:
+Vietnam (strong agricultural policies reduce hunger despite lower GDP growth)
+Moldova (effective food security programs despite economic challenges)"
+"These outliers imply that  economic growth(goal 8) alone does not guarantee food security(goal 2)"
+
+```
