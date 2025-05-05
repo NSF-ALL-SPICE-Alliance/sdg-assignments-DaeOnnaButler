@@ -217,14 +217,14 @@ fviz_nbclust(sdr_data_imputed, kmeans, method = "silhouette")
 The kmeans() function clusters countries into groups (int this case 2, visualized above) based on 84 SDG scores
 
 ```{r}
-k2 <- kmeans(sdr_data_imputed, centers = 2)
+k6 <- kmeans(sdr_data_imputed, centers = 6)
 ```
 
 
 We can visualize the outputs of the kmeans function with fviz_cluster()
 
 ```{r}
-fviz_cluster(k2, data = sdr_data_imputed) +
+fviz_cluster(k6, data = sdr_data_imputed) +
   theme_minimal()
 ```
 
@@ -232,7 +232,7 @@ You can view the countries and their assigned cluster in a dataframe with the co
 
 
 ```{r}
-country_clusters <- as.data.frame(k2$cluster)
+country_clusters <- as.data.frame(k6$cluster)
 ```
 
 
@@ -246,8 +246,8 @@ To answer this question, we train a random forest model to make predictions of m
 
 
 ```{r}
-rf_matmort <- randomForest(normalized_score_sdg3_matmort ~ .,
-                             data = sdr_data_imputed,
+rf_cleanfuel <- randomForest(normalized_score_sdg7_cleanfuel ~ .,
+                            data = sdr_data_imputed,
                              importance = TRUE)
 ```
 
@@ -257,14 +257,14 @@ The "% Var explained" value of 80.83 indicates that approximately 80.83% of the 
 
 
 ```{r}
-rf_matmort
+rf_cleanfuel
 ```
 
 Now we can look at the variables most important in making the predictions
 
 
 ```{r}
-importance_df <- as.data.frame(rf_matmort$importance)
+importance_df <- as.data.frame(rf_cleanfuel$importance)
 ```
 
 Let's take the top 10 and graph them
@@ -277,13 +277,11 @@ importance_df_top_10 <- importance_df %>%
 
 ```{r}
 ggplot(importance_df_top_10, aes(x = `%IncMSE`, y = reorder(variable, `%IncMSE`))) +
-  geom_bar(stat = "identity", fill = "steelblue", color = "black") +
+  geom_bar(stat = "identity", fill = "#4CAF50", color = "black") +
   theme_minimal() +
-  labs(title = "Most Important Variables in Predicting Maternal Mortality",
-       subtitle = "Top 10",
-       y = "SDG Indicator",
-       x = "Feature Importance (% Increase in Mean Squared Error)")
-
+  labs(title = "Top 10 Predictors of Clean Fuel Access (SDG 7)",
+       y = "Variable",
+       x = "Importance (% Increase in MSE)")
 ```
 
 
