@@ -1,0 +1,204 @@
+---
+title: "Education and Inequality"
+author: "DaeOnna Butler"
+date: "2025-05-06"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(ggpubr)
+library(janitor)
+library(ggcorrplot)
+library(vembedr)
+library(plotly)
+library(rnaturalearth)
+library(leaflet)
+library(sf)
+library(naniar) 
+library(cluster) 
+library(randomForest) 
+library(factoextra) 
+library(pdp)
+library(ggcorrplot)
+library(dplyr)
+library(ggplot2)
+```
+
+The 2023 Sustainable Development Report provides the data for this analysis. This research examines how educational attainment (SDG 4) and inequality levels (SDG 10) interact in multiple countries. The research investigates whether educational advancements affect or show a relationship with inequality levels.
+```{r message=FALSE}
+sdr_data<-read_csv(here("data/SDR-2023-Data.csv"))
+```
+
+Clean column names of the dataframe
+
+```{r message=FALSE}
+sdr_data<- sdr_data %>%
+  clean_names()
+
+```
+
+# Preview column names related to education and inequality
+Before building my visualizations, I wanted to check which variables were related to the education and inequality SDGs. This helps ensure that I am using the correct indicators in my analysis.
+
+```{r}
+names(sdr_data) %>% 
+  str_subset("sdg4|edu")  # Shows all columns containing "sdg4" or "edu"
+```
+
+```{r}
+names(sdr_data) %>% str_subset("sdg10|ineq")
+```
+# Create a scatter plot to visualize the relationship between SDG 4 (Education) and SDG 10 (Inequality)
+
+```{r}
+plot_data <- sdr_data %>%
+  filter(!is.na(normalized_score_sdg4_primary) & !is.na(normalized_score_sdg10_gini))
+
+```
+
+```{r}
+# Create a plot object p
+p <- plot_ly(data = plot_data, 
+             x = ~normalized_score_sdg4_primary, 
+             y = ~normalized_score_sdg10_gini, 
+             type = 'scatter', 
+             mode = 'markers',
+             text = ~paste("Country:", country,
+                           "<br>Education Score (SDG 4):", normalized_score_sdg4_primary, 
+                           "<br>Inequality Score (SDG 10):", normalized_score_sdg10_gini)) 
+
+```
+
+```{r}
+# Scatter plot without region or GDP
+plot_ly(data = plot_data, 
+        x = ~normalized_score_sdg4_primary, 
+        y = ~normalized_score_sdg10_gini, 
+        text = ~paste("Country:", country, 
+                      "<br>Education Score (SDG 4):", normalized_score_sdg4_primary, 
+                      "<br>Inequality Score (SDG 10):", normalized_score_sdg10_gini),
+        type = 'scatter', 
+        mode = 'markers') %>%
+  layout(title = "Education vs Inequality (No Region or GDP)",
+         xaxis = list(title = "Primary Education Score (SDG 4)"),
+         yaxis = list(title = "Gini Coefficient (SDG 10)"),
+         showlegend = FALSE)
+
+```
+Visualization 1: The scatter plot visualizes how normalized_score_sdg4_primary and normalized_score_sdg10_gini interact by representing primary education quality and Gini index-based inequality respectively. These variables were selected because they represent essential measurements of social advancement and equity. This analysis intends to find out if there is an inverse relationship between educational achievement scores and levels of inequality across different nations. A scatter plot visualized each country's data points to detect patterns and outliers in the dataset. Despite having high education scores some countries continue to experience significant inequality which indicates education by itself isn't sufficient to eliminate all forms of social disparities. This chart encourages researchers to investigate the cause-and-effect link between SDGs and their direct impact on inequality. The interactive system allows users to examine detailed scores of countries by hovering over them. The main relationship analyzed in this project becomes apparent through this plot.
+
+# Map showing primary education scores globally
+
+```{r}
+# Join country shapes with SDR data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Merge with your data
+map_data <- world %>%
+  left_join(sdr_data, by = c("admin" = "country"))
+
+# Leaflet map
+leaflet(map_data) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~colorNumeric("YlGnBu", map_data$normalized_score_sdg4_primary)(normalized_score_sdg4_primary),
+    weight = 0.5,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#666",
+      fillOpacity = 0.9,
+      bringToFront = TRUE),
+    label = ~paste(admin, ": ", round(normalized_score_sdg4_primary, 1)),
+    labelOptions = labelOptions(direction = "auto")
+  ) %>%
+  addLegend(
+    pal = colorNumeric("YlGnBu", domain = map_data$normalized_score_sdg4_primary),
+    values = ~normalized_score_sdg4_primary,
+    opacity = 0.7,
+    title = "Primary Education Score",
+    position = "bottomright"
+  )
+
+```
+Visualization 2: The choropleth map shows normalized_score_sdg4_primary data for primary education across all nations. Mapping geographic patterns helped me understand education outcomes because regional context plays a critical role in their interpretation. European countries and areas of East Asia typically achieve high scores whereas sub-Saharan Africa and South Asia frequently show lower scores. The visualization offers an accessible and straightforward depiction of worldwide educational differences. Darker shades on the color scale help users easily identify higher scores. This analysis framework prepares researchers for more detailed studies about the factors affecting education levels and their connections to inequality. The map demonstrates that educational progress exists worldwide but it is distributed in a non-uniform way.
+
+# Bar chart of top and bottom 10 countries by SDG 4 Primary Education Score
+
+```{r}
+# Top 10
+top10 <- sdr_data %>%
+  filter(!is.na(normalized_score_sdg4_primary)) %>%
+  top_n(10, normalized_score_sdg4_primary)
+
+# Bottom 10
+bottom10 <- sdr_data %>%
+  filter(!is.na(normalized_score_sdg4_primary)) %>%
+  top_n(-10, normalized_score_sdg4_primary)
+
+# Combine & label
+bar_data <- bind_rows(top10, bottom10) %>%
+  mutate(rank = if_else(normalized_score_sdg4_primary >= mean(normalized_score_sdg4_primary), "Top 10", "Bottom 10"))
+
+# Plot
+ggplot(bar_data, aes(x = reorder(country, normalized_score_sdg4_primary), y = normalized_score_sdg4_primary, fill = rank)) +
+  geom_col() +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Top and Bottom 10 Countries in Primary Education",
+    y = "SDG 4 Score",
+    x = "Country"
+  ) +
+  scale_fill_manual(values = c("Top 10" = "#1f78b4", "Bottom 10" = "#e31a1c")) +
+  theme(legend.position = "bottom")
+
+```
+Visualization 3: The bar chart displays the leading and trailing 10 countries as they rank according to normalized_score_sdg4_primary. Bar plots work well for ranking and comparison purposes, which makes them suitable for this visualization. The visualization provides understanding of the dataset extremes while enabling analysis of factors leading to educational leadership or lagging status. The top 10-ranked countries exhibit strong public infrastructure alongside effective teacher training and accessible educational policies. The bottom 10 countries suffer from political instability, poor education funding systems, and geographic isolation issues. Through this comparison, researchers can pinpoint which case studies they should investigate further. This analysis serves as a segment of the larger story about the progress of education across different locations. The extremities depicted here offer a stark contrast to average measurements shown elsewhere in the data.
+
+# PCA analysis and biplot to show major contributing dimensions to variation in SDG scores
+
+```{r}
+# Step 1: Select relevant variables and drop rows with missing values
+pca_data <- sdr_data %>%
+  select(country,
+         normalized_score_sdg4_primary,
+         normalized_score_sdg4_literacy,
+         normalized_score_sdg10_gini,
+         normalized_score_sdg10_palma) %>%
+  drop_na()
+
+# Step 2: Set country names as row names for PCA
+pca_matrix <- pca_data %>%
+  column_to_rownames("country")
+
+# Step 3: Run PCA
+pca_result <- prcomp(pca_matrix, scale. = TRUE)
+
+# Step 4: Visualize PCA with a biplot
+fviz_pca_biplot(pca_result,
+                geom.ind = "point",
+                col.ind = "steelblue",
+                label = "var",           # show arrows for variables
+                col.var = "firebrick",
+                repel = TRUE,
+                title = "PCA Biplot: Education and Inequality Indicators") +
+  theme_minimal()
+interactive_plot <- ggplotly(p, tooltip = "text")
+
+# Show the interactive plot
+interactive_plot
+
+```
+Visualization 4: The Principal Component Analysis (PCA) applied to SDG Indicators served to lower the dimensionality and analyze connections between education and inequality factors. The analysis incorporated normalized_score_sdg4_primary together with normalized_score_sdg4_literacy, normalized_score_sdg10_gini and normalized_score_sdg10_palma. The biplot enables visualization of nation profiles based on indicator combinations and detects clusters of analogous country profiles. PCA analysis was selected because it uncovers hidden patterns within the dataset which single-variable plots fail to reveal. Countries that achieve high performance across all indicators form a group while those with high inequality alongside low education create a separate cluster. The biplot demonstrates the indicators driving the most variance through the direction and length of arrows. The analysis enhances understanding by illustrating the collaborative behavior of indicators and the positioning of countries within the multidimensional framework. This analysis raises questions about which factors have the greatest impact on improving SDG outcomes.
+
+Conclusion 
+
+This research investigated the connection between education systems and inequality patterns in worldwide development processes. Our analysis using scatter plots, maps, bar charts, and multivariate analysis revealed that higher education scores usually correspond with lower inequality but the pattern is not universally applicable. The existence of countries that defy this trend demonstrates that social, political and economic factors play a significant role in this relationship. Contextual elements such as geographic location and development stage play a critical role in understanding these relationships according to the data. Subsequent analyses should explore time-series data while providing more comprehensive regional breakdowns and examining individual countries in greater detail. The visualizations offer an integrated story that outlines global progress toward SDG 4 and SDG 10 targets and suggests paths for future action.
